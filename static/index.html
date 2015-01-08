@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>File Upload/Download</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <style>
+    body {
+      padding-top: 40px;
+      padding-bottom: 40px;
+    }
+
+    .form-upload {
+      max-width: 330px;
+      padding: 15px;
+      margin: 0 auto;
+    }
+    </style>
+
+    <script>
+function check_file() {
+    http = new XMLHttpRequest();
+    http.onload = function() {
+        fd = document.getElementById('filedesc')
+        fl = document.getElementById('filelink')
+        if (http.status==200) {
+            hdr = http.getResponseHeader("Content-Disposition");
+            regex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            filename = regex.exec(hdr)[1];
+            fd.innerHTML = filename + " is ready for download";
+            fl.className = fl.className.replace(/(?:^|\s)disabled(?!\S)/g, '')
+        } else {
+            fd.innerHTML = "No file available";
+            fl.className += " disabled";
+        }
+    }
+    http.open("HEAD", "/download", true);
+    http.send();
+}
+document.addEventListener("DOMContentLoaded", check_file);
+window.setInterval(check_file, 5000);
+    </script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+
+    <div class="container">
+
+      <form class="form-upload" action="/upload" method="post" enctype="multipart/form-data">
+        <h2 class="form-upload-heading">Upload</h2>
+        <div class="form-group">
+          <label for="file_ul">File</label>
+          <input type="file" name="file_ul">
+          <p class="help-block">Select a file to transfer to the host.</p>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Upload!</button>
+        <h2 class="form-upload-heading">Download</h2>
+        <p id="filedesc">No file available</p>
+        <a id="filelink" href="/download" class="btn btn-lg btn-primary btn-block disabled">Download!</a>
+      </form>
+
+    </div> <!-- /container -->
+
+  </body>
+</html>
+

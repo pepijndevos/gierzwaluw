@@ -3,7 +3,7 @@ ini_set('display_errors',1);
 ini_set('display_startup_errors',1);
 error_reporting(-1);
 
-$pdo = new PDO("mysql:host=localhost;dbname=devos_announce", 'devos_announce', 'BZRefA0z2');
+$pdo = new PDO("mysql:host=localhost;dbname=foo", 'bar', 'baz');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $pdo->exec("CREATE TABLE IF NOT EXISTS mappings (
@@ -17,7 +17,9 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS mappings (
 $addipstmt = $pdo->prepare("INSERT INTO mappings
                            (pubip, privip, hostname) VALUES
                            (INET_ATON(:pubip), INET_ATON(:privip), :hostname)
-                           ON DUPLICATE KEY UPDATE hostname = :hostname");
+                           ON DUPLICATE KEY UPDATE
+                           hostname = :hostname,
+                           age = NOW()");
 
 $getipstmt = $pdo->prepare("SELECT INET_NTOA(privip) as ip, hostname FROM mappings
                              WHERE pubip = INET_ATON(:pubip)

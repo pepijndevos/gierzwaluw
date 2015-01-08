@@ -56,6 +56,7 @@ class FileServer(object):
         if not self.file_dl:
             raise cherrypy.HTTPError(404, "No file available for download")
         else:
+            #cherrypy.engine.publish('file-dl', 'done')
             return serve_file(self.file_dl, "application/x-download", "attachment")
 
 
