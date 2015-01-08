@@ -2,7 +2,6 @@ import os
 import queue
 import requests
 import socket
-import shutil
 import cherrypy
 from cherrypy.lib.static import serve_file
 from cherrypy.process import plugins
@@ -56,34 +55,4 @@ class FileServer(object):
         if not self.file_dl:
             raise cherrypy.HTTPError(404, "No file available for download")
         else:
-            #cherrypy.engine.publish('file-dl', 'done')
             return serve_file(self.file_dl, "application/x-download", "attachment")
-
-
-class CLIPlugin(plugins.SimplePlugin):
-
-    def __init__(self, bus, file_dl=None, file_ul=None):
-        plugins.SimplePlugin.__init__(self, bus)
-        self.file_dl = os.path.abspath(file_dl)
-        self.file_ul = file_ul
-
-    def start(self):
-        self.bus.log('Starting up CLI')
-        self.bus.subscribe("file-ul", self.save_file)
-        self.bus.publish('file-dl', self.file_dl)
-
-    def stop(self):
-        self.bus.log('Stopping CLI')
-        self.bus.unsubscribe("file-ul", self.save_file)
-
-    def save_file(self, file_ul):
-        self.bus.log('Saving %s' % file_ul.filename)
-        with open(os.path.join(self.file_ul, file_ul.filename), 'wb') as outfile:
-            shutil.copyfileobj(file_ul.file, outfile)
-
-if __name__ == '__main__':
-    import sys
-    CLIPlugin(cherrypy.engine, file_dl=sys.argv[1], file_ul=sys.argv[2]).subscribe()
-    cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                            'server.socket_port': 7557})
-    cherrypy.quickstart(FileServer())
