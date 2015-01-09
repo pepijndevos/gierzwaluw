@@ -47,8 +47,10 @@ class FileServer(object):
 
     @cherrypy.expose
     def upload(self, file_ul):
-        cherrypy.engine.publish('file-ul', file_ul)
-        raise cherrypy.HTTPRedirect("/")
+        if any(cherrypy.engine.publish('file-ul', file_ul)):
+            raise cherrypy.HTTPRedirect("/")
+        else:
+            raise cherrypy.HTTPError(403, "File not accepted")
 
     @cherrypy.expose
     def download(self):

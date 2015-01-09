@@ -27,6 +27,9 @@ class CLIPlugin(plugins.SimplePlugin):
             self.bus.log('Saving %s' % file_ul.filename)
             with open(os.path.join(self.file_ul, file_ul.filename), 'wb') as outfile:
                 shutil.copyfileobj(file_ul.file, outfile)
+            return True
+        else:
+            return False
 
 if __name__ == '__main__':
     import argparse
