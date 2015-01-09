@@ -28,7 +28,13 @@ announce_url = "http://wishfulcoding.nl/announce.php"
 session = requests.Session()
 def announce():
     cherrypy.engine.log('Announcing %s at %s' % (hostname, privip))
-    session.get(announce_url, params={"ip": privip, "hostname": hostname})
+    try:
+        session.get(announce_url,
+                params={"ip": privip, "hostname": hostname},
+                timeout=5)
+    except requests.exceptions.RequestException:
+        cherrypy.engine.log('Failed to announce')
+
 
 class FileServer(object):
 
