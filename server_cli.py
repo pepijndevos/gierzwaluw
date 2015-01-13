@@ -61,7 +61,7 @@ class CLIPlugin(plugins.SimplePlugin):
 
 def progress(ratio, width=50):
     bar = ("#" * int(ratio * width)).ljust(width)
-    sys.stdout.write("\r[%s]" % bar)
+    sys.stdout.write("\r[%s] %.2f%%" % (bar, ratio*100))
     if ratio >= 1:
         sys.stdout.write("\n")
     sys.stdout.flush()
