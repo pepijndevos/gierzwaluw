@@ -75,7 +75,7 @@ class FileServer(object):
         else:
             return serve_file(self.file_dl, "application/x-download", "attachment")
 
-def start():
+def start(block=True):
     announce_web()
     plugins.BackgroundTask(60, announce_web).start()
 
@@ -84,6 +84,12 @@ def start():
     cherrypy.config.update({
         'server.socket_host': '0.0.0.0',
         'server.socket_port': 7557,
+        'engine.autoreload.on': False,
         #'environment': 'embedded',
     })
-    cherrypy.quickstart(FileServer())
+
+    cherrypy.tree.mount(FileServer())
+    cherrypy.engine.start()
+    if block:
+        cherrypy.engine.block()
+
