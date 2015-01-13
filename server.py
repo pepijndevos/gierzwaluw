@@ -5,6 +5,7 @@ import socket
 import cherrypy
 from cherrypy.lib.static import serve_file
 from cherrypy.process import plugins
+from zeroconf import ServiceInfo, Zeroconf
 
 import pdb
 
@@ -24,9 +25,10 @@ except socket.error:
 finally:
     s.close()
 
+# Announce on web
 announce_url = "http://wishfulcoding.nl/announce.php"
 session = requests.Session()
-def announce():
+def announce_web():
     cherrypy.engine.log('Announcing %s at %s' % (hostname, privip))
     try:
         session.get(announce_url,
@@ -35,14 +37,22 @@ def announce():
     except requests.exceptions.RequestException:
         cherrypy.engine.log('Failed to announce')
 
+# Announce on Zeroconf
+sinfo = ServiceInfo("_http._tcp.local.",
+                   hostname+".gierzwaluw._http._tcp.local.",
+                   socket.inet_aton(privip), 7557, 0, 0,
+                   {})
+
+def announce_zeroconf():
+    zeroconf = Zeroconf()
+    zeroconf.register_service(sinfo)
+    cherrypy.engine.log('Announcing mDNS')
 
 class FileServer(object):
 
     def __init__(self):
         self.file_dl = None
         cherrypy.engine.subscribe('file-dl', self.set_file_dl)
-        announce()
-        plugins.BackgroundTask(60, announce).start()
 
     def set_file_dl(self, f):
         self.file_dl = f
@@ -64,3 +74,16 @@ class FileServer(object):
             raise cherrypy.HTTPError(404, "No file available for download")
         else:
             return serve_file(self.file_dl, "application/x-download", "attachment")
+
+def start():
+    announce_web()
+    plugins.BackgroundTask(60, announce_web).start()
+
+    announce_zeroconf()
+
+    cherrypy.config.update({
+        'server.socket_host': '0.0.0.0',
+        'server.socket_port': 7557,
+        #'environment': 'embedded',
+    })
+    cherrypy.quickstart(FileServer())

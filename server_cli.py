@@ -2,9 +2,37 @@ import os
 import sys
 import shutil
 import cherrypy
+import socket
 from cherrypy.process import plugins
+from zeroconf import ServiceBrowser, Zeroconf
 
-from server import FileServer
+from server import start
+from client import Client
+
+class CLIListener(object):
+
+    def remove_service(self, zeroconf, type, name):
+        pass
+
+    def add_service(self, zeroconf, type, name):
+        print(name)
+        info = zeroconf.get_service_info(type, name)
+        if info:
+            addr = "http://%s:%d" % (socket.inet_ntoa(info.address), info.port)
+            c = Client(addr)
+            f = c.poll()
+            if f:
+                print("Serving", f)
+                dl = input("Enter download location [ignore]: ")
+            else:
+                print("Serving nothing")
+                dl = None
+
+            if dl:
+                c.save(dl)
+        else:
+            print("No info")
+
 
 class CLIPlugin(plugins.SimplePlugin):
 
@@ -31,14 +59,28 @@ class CLIPlugin(plugins.SimplePlugin):
         else:
             return False
 
+def progress(ratio, width=50):
+    bar = ("#" * int(ratio * width)).ljust(width)
+    sys.stdout.write("\r[%s]" % bar)
+    if ratio >= 1:
+        sys.stdout.write("\n")
+    sys.stdout.flush()
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--upload", help="Directory to upload files")
     parser.add_argument("--download", help="File to offer for download")
+    parser.add_argument("--browse", help="Browse peers", action="store_true")
     args = parser.parse_args()
-
-    CLIPlugin(cherrypy.engine, file_dl=args.download, file_ul=args.upload).subscribe()
-    cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                            'server.socket_port': 7557})
-    cherrypy.quickstart(FileServer())
+    
+    if args.browse:
+        cherrypy.engine.subscribe("progress", progress)
+        zeroconf = Zeroconf()
+        listener = CLIListener()
+        browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+        browser.join()
+    else:
+        CLIPlugin(cherrypy.engine, file_dl=args.download, file_ul=args.upload).subscribe()
+        start()
