@@ -84,8 +84,8 @@ def start(block=True):
     cherrypy.config.update({
         'server.socket_host': '0.0.0.0',
         'server.socket_port': 7557,
-        'engine.autoreload.on': False,
-        #'environment': 'embedded',
+        #'engine.autoreload.on': False,
+        'environment': 'embedded',
     })
 
     cherrypy.tree.mount(FileServer())
