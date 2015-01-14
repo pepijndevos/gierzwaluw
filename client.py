@@ -10,10 +10,13 @@ class Client(object):
         self.base = base
     
     def poll(self):
-        res = self.session.head(urljoin(self.base, '/download'))
-        cd = res.headers.get('Content-Disposition', '')
-        _, params = parse_header(cd)
-        return params.get('filename')
+        try:
+            res = self.session.head(urljoin(self.base, '/download'), timeout=5)
+            cd = res.headers.get('Content-Disposition', '')
+            _, params = parse_header(cd)
+            return params.get('filename')
+        except requests.exceptions.RequestException:
+            return None
 
     def save(self, filename):
         with open(filename, 'wb') as handle:
