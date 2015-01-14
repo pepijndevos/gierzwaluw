@@ -21,6 +21,7 @@ There are 3 modes of opperation:
 3. Swallow-to-browser or browser-to-swallow without autodiscovery.
 
 ![example transfer](https://raw.githubusercontent.com/pepijndevos/gierzwaluw/master/images/transfer.gif)
+![example transfer](https://raw.githubusercontent.com/pepijndevos/gierzwaluw/master/images/browser_transfer.gif)
 
 ## Installation
 
