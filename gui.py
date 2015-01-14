@@ -41,7 +41,14 @@ class PeerMenu(QtGui.QMenu):
 
     def callback(self, addr):
         def cb():
-            print(addr)
+            (filename, _) = QtGui.QFileDialog.getSaveFileName()
+            dialog = QtGui.QProgressDialog("Downloading file...", "Go Go Go!", 0, 100)
+            dialog.setModal(True)
+            prog = lambda ratio: dialog.setValue(ratio * 100)
+            cherrypy.engine.subscribe("progress", prog)
+            c = Client(addr)
+            c.save(filename)
+            cherrypy.engine.unsubscribe("progress", prog)
         return cb
 
     @QtCore.Slot(object)
@@ -126,7 +133,6 @@ if __name__ == '__main__':
 
     icon.setContextMenu(menu)
 
-    #cherrypy.engine.subscribe("progress", progress)
     zeroconf = Zeroconf()
     ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
 
