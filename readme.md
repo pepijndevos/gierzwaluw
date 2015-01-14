@@ -20,6 +20,16 @@ There are 3 modes of opperation:
 2. A swallow-to-browser or browser-to-swallow transfer with internet based discovery.
 3. Swallow-to-browser or browser-to-swallow without autodiscovery.
 
+![example transfer](https://raw.githubusercontent.com/pepijndevos/gierzwaluw/master/images/transfer.gif)
+
+## Installation
+
+For now just install the requirements and run `python gui.py` or  `python cli.py`.
+
+Application bundles are desirable at some point, but a pain to generate.
+
+## Status
+
 Very much work in progress.
 
 Thanks to @Sidnicious and @myf for talking me into this.
