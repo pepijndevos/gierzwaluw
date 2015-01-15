@@ -6,9 +6,6 @@ from zeroconf import ServiceInfo, Zeroconf
 from bottle import Bottle, run, static_file, request, redirect, abort
 from PySide import QtCore
 
-local_dir = os.path.dirname(__file__)
-abs_dir = os.path.join(os.getcwd(), local_dir)
-
 hostname = socket.gethostname()
 # might be 127.0.0.1
 privip = socket.gethostbyname(hostname)
@@ -77,7 +74,7 @@ class FileServer(QtCore.QObject):
         self.file_dl = os.path.abspath(f)
 
     def index(self):
-        return static_file("/static/index.html", root=abs_dir)
+        return static_file("/static/index.html", root=os.getcwd())
 
     def upload(self):
         self.uploaded.emit(request.files.get('upload'))
