@@ -95,7 +95,7 @@ if __name__ == '__main__':
     st.server.uploaded.connect(app.save_file)
     app.opened.connect(st.server.set_download)
 
-    icon = QtGui.QSystemTrayIcon(QtGui.QIcon('images/swallow.svg'), app)
+    icon = QtGui.QSystemTrayIcon(QtGui.QIcon('images/swallow.png'), app)
 
     listener = GUIListener()
     t = QtCore.QThread()
