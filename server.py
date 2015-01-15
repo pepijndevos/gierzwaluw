@@ -26,14 +26,16 @@ session = requests.Session()
 class WebAnnouncer(QtCore.QThread):
 
     def announce(self):
+        print("Announcing on web")
         try:
             session.get(announce_url,
                     params={"ip": privip, "hostname": hostname},
                     timeout=5)
         except requests.exceptions.RequestException:
-            pass
+            print("Announce failed")
     
     def run(self):
+        self.announce()
         timer = QtCore.QTimer()
         timer.timeout.connect(self.announce)
         timer.start(1000*60*4)
@@ -48,6 +50,7 @@ sinfo = ServiceInfo("_http._tcp.local.",
                    {})
 
 def announce_zeroconf():
+    print("Announcing on Bonjour")
     zeroconf = Zeroconf()
     zeroconf.register_service(sinfo)
 
