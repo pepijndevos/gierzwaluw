@@ -1,4 +1,4 @@
-cherrypy
+bottle
 requests
 pyside
 zeroconf

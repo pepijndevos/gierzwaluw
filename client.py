@@ -1,11 +1,14 @@
 import requests
-import cherrypy
 from urllib.parse import urljoin
 from cgi import parse_header
+from PySide import QtCore
 
-class Client(object):
+class Client(QtCore.QObject):
+
+    progress = QtCore.Signal(float)
 
     def __init__(self, base):
+        QtCore.QObject.__init__(self)
         self.session = requests.Session()
         self.base = base
     
@@ -27,7 +30,7 @@ class Client(object):
 
             for block in response.iter_content(1024):
                 written += len(block)
-                cherrypy.engine.publish('progress', written / lenght) 
+                self.progress.emit(written / lenght) 
                 if not block:
                     break
                 handle.write(block)

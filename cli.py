@@ -1,12 +1,11 @@
 import os
 import sys
 import shutil
-import cherrypy
 import socket
-from cherrypy.process import plugins
 from zeroconf import ServiceBrowser, Zeroconf
+from PySide import QtCore
 
-from server import start
+from server import FileServer
 from client import Client
 
 class CLIListener(object):
@@ -29,35 +28,23 @@ class CLIListener(object):
                 dl = None
 
             if dl:
+                c.progress.connect(progress)
                 c.save(dl)
         else:
             print("No info")
 
 
-class CLIPlugin(plugins.SimplePlugin):
+class Saver(QtCore.QObject):
 
-    def __init__(self, bus, file_dl=None, file_ul=None):
-        plugins.SimplePlugin.__init__(self, bus)
-        self.file_dl = os.path.abspath(file_dl) if file_dl else None
-        self.file_ul = file_ul
+    def __init__(self, dir=None):
+        QtCore.QObject.__init__(self)
+        self.dir = dir
 
-    def start(self):
-        self.bus.log('Starting up CLI')
-        self.bus.subscribe("file-ul", self.save_file)
-        self.bus.publish('file-dl', self.file_dl)
-
-    def stop(self):
-        self.bus.log('Stopping CLI')
-        self.bus.unsubscribe("file-ul", self.save_file)
-
-    def save_file(self, file_ul):
-        if self.file_ul:
-            self.bus.log('Saving %s' % file_ul.filename)
-            with open(os.path.join(self.file_ul, file_ul.filename), 'wb') as outfile:
-                shutil.copyfileobj(file_ul.file, outfile)
-            return True
-        else:
-            return False
+    @QtCore.Slot(object)
+    def save_file(self, upload):
+        if self.dir:
+            print('Saving %s' % upload.filename)
+            upload.save(self.dir)
 
 def progress(ratio, width=50):
     bar = ("#" * int(ratio * width)).ljust(width)
@@ -69,6 +56,9 @@ def progress(ratio, width=50):
 
 if __name__ == '__main__':
     import argparse
+
+    QtCore.QCoreApplication(sys.argv) # for timer
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--upload", help="Directory to upload files")
     parser.add_argument("--download", help="File to offer for download")
@@ -76,11 +66,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     if args.browse:
-        cherrypy.engine.subscribe("progress", progress)
         zeroconf = Zeroconf()
         listener = CLIListener()
         browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
         browser.join()
     else:
-        CLIPlugin(cherrypy.engine, file_dl=args.download, file_ul=args.upload).subscribe()
-        start()
+        saver = Saver(args.upload)
+        server = FileServer()
+        server.set_download(args.download)
+        server.uploaded.connect(saver.save_file)
+        server.start()
