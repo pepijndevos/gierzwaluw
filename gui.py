@@ -1,35 +1,11 @@
 import sys
-import cherrypy
 import shutil
 import socket
-from cherrypy.process import plugins
 from PySide import QtCore, QtGui
 from zeroconf import ServiceBrowser, Zeroconf
 
-from server import start
+from server import FileServer
 from client import Client
-
-class GUIPlugin(plugins.SimplePlugin, QtCore.QObject):
-
-    save = QtCore.Signal(object)
-
-    def __init__(self, bus):
-        QtCore.QObject.__init__(self)
-        plugins.SimplePlugin.__init__(self, bus)
-
-    def start(self):
-        self.bus.subscribe("file-ul", self.save_file)
-
-    def stop(self):
-        self.bus.unsubscribe("file-ul", self.save_file)
-
-    def share(self):
-        (filename, _) = QtGui.QFileDialog.getOpenFileName()
-        self.bus.publish('file-dl', filename)
-
-    def save_file(self, file_ul):
-        self.save.emit(file_ul)
-        return True # hrm
 
 class PeerMenu(QtGui.QMenu):
 
@@ -44,16 +20,13 @@ class PeerMenu(QtGui.QMenu):
             (filename, _) = QtGui.QFileDialog.getSaveFileName()
             dialog = QtGui.QProgressDialog("Downloading file...", "Go Go Go!", 0, 100)
             dialog.setModal(True)
-            prog = lambda ratio: dialog.setValue(ratio * 100)
-            cherrypy.engine.subscribe("progress", prog)
             c = Client(addr)
+            c.progress.connect(lambda ratio: dialog.setValue(ratio * 100))
             c.save(filename)
-            cherrypy.engine.unsubscribe("progress", prog)
         return cb
 
     @QtCore.Slot(object)
     def set_peers(self, files):
-        print(files)
         self.clear()
         for addr, filename in files:
             self.addAction(QtGui.QAction(filename, self, triggered=self.callback(addr)))
@@ -84,7 +57,6 @@ class GUIListener(QtCore.QObject):
         self.services.pop(name)
 
     def add_service(self, zeroconf, type, name):
-        print(name)
         info = zeroconf.get_service_info(type, name)
         if info:
             addr = "http://%s:%d" % (socket.inet_ntoa(info.address), info.port)
@@ -92,33 +64,36 @@ class GUIListener(QtCore.QObject):
 
 class Application(QtGui.QApplication):
 
-    @staticmethod
-    def quit():
-        QtGui.QApplication.quit()
-        cherrypy.engine.exit()
+    opened = QtCore.Signal(object)
+
+    @QtCore.Slot(str)
+    def open_file(self):
+        (filename, _) = QtGui.QFileDialog.getOpenFileName()
+        self.opened.emit(filename)
 
     @QtCore.Slot(object)
-    def save_file(self, file_ul):
+    def save_file(self, upload):
         (filename, _) = QtGui.QFileDialog.getSaveFileName()
-        print(filename)
-
         if filename:
-            cherrypy.engine.log('Saving %s' % file_ul.filename)
-            with open(filename, 'wb') as outfile:
-                shutil.copyfileobj(file_ul.file, outfile)
-            return True
-        else:
-            return False
+            upload.save(filename)
+
+class ServerThread(QtCore.QThread):
+
+    def __init__(self):
+        QtCore.QThread.__init__(self)
+        self.server = FileServer()
+
+    def run(self):
+        self.server.start()
 
 if __name__ == '__main__':
-    plugin = GUIPlugin(cherrypy.engine)
-    plugin.subscribe()
-    start(False)
-
     app = Application(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
-    plugin.save.connect(app.save_file)
+    st = ServerThread()
+    st.start()
+    st.server.uploaded.connect(app.save_file)
+    app.opened.connect(st.server.set_download)
 
     icon = QtGui.QSystemTrayIcon(QtGui.QIcon('images/glyphicons-206-electricity.png'), app)
 
@@ -127,7 +102,7 @@ if __name__ == '__main__':
     t.start()
     listener.moveToThread(t)
 
-    menu = PeerMenu(share=plugin.share, quit=app.quit)
+    menu = PeerMenu(share=app.open_file, quit=app.quit)
     icon.activated.connect(listener.check)
     listener.files.connect(menu.set_peers)
 
