@@ -22,15 +22,22 @@ class Client(QtCore.QObject):
             return None
 
     def save(self, filename):
-        with open(filename, 'wb') as handle:
-            response = self.session.get(urljoin(self.base, '/download'), stream=True)
-            response.raise_for_status()
-            lenght = int(response.headers['content-length'])
-            written = 0
+        handle = open(filename, 'wb')
 
-            for block in response.iter_content(1024):
-                written += len(block)
-                self.progress.emit(written / lenght) 
-                if not block:
-                    break
-                handle.write(block)
+        response = self.session.get(urljoin(self.base, '/download'), stream=True)
+        response.raise_for_status()
+        lenght = int(response.headers['content-length'])
+        self.written = 0
+
+        timer = QtCore.QTimer(self)
+        def download():
+            block = response.raw.read(1024)
+            self.written += len(block)
+            self.progress.emit(self.written / lenght * 100) 
+            if not block:
+                timer.stop()
+                handle.close()
+                return
+            handle.write(block)
+        timer.timeout.connect(download)
+        timer.start()

@@ -87,5 +87,7 @@ class FileServer(QtCore.QObject):
         if not self.file_dl:
             abort(404, "No file available for download")
         else:
-            return static_file(self.file_dl, root='/', download=os.path.basename(self.file_dl))
+            dir, file = os.path.split(self.file_dl)
+            print(dir, file)
+            return static_file(file, root=dir, download=os.path.basename(self.file_dl))
 

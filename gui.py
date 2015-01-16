@@ -37,9 +37,12 @@ class GUIListener(QtCore.QObject):
 
 class ListenerThread(QtCore.QThread):
 
-    def run(self):
+    def __init__(self):
+        QtCore.QThread.__init__(self)
         self.listener = GUIListener()
+        self.listener.moveToThread(self)
 
+    def run(self):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.listener.check)
         timer.start(1000*60)
@@ -65,9 +68,10 @@ class PeerWindow(QtCore.QObject):
     opened = QtCore.Signal(object)
 
     def __init__(self, app, icon):
-        self.icon = icon
         QtCore.QObject.__init__(self)
-        self.window = QtGui.QMainWindow(parent=None, flags=QtCore.Qt.FramelessWindowHint)
+        self.app = app
+        self.icon = icon
+        self.window = QtGui.QMainWindow(parent=None, flags=QtCore.Qt.Popup)
 
         frame = QtGui.QFrame(self.window)
         self.window.setCentralWidget(frame)
@@ -76,6 +80,9 @@ class PeerWindow(QtCore.QObject):
         self.peers = QtGui.QListWidget(self.window)
         self.peers.itemClicked.connect(self.callback)
         layout.addWidget(self.peers)
+
+        self.progress = QtGui.QProgressBar(self.window)
+        layout.addWidget(self.progress)
 
         share = QtGui.QPushButton("Share...", self.window)
         share.clicked.connect(self.open_file)
@@ -102,7 +109,20 @@ class PeerWindow(QtCore.QObject):
             self.window.hide()
         else:
             self.window.show()
-            self.window.move(self.icon.geometry().center()) # close enough
+            height = self.window.geometry().height()
+            width = self.window.geometry().width()
+            icon = self.icon.geometry().center()
+            desktop = self.app.desktop().availableGeometry()
+            center = desktop.center();
+            margin = 50
+            if   icon.x() > center.x() and icon.y() > center.y(): # bottom right icon
+                self.window.move(desktop.right() - margin - width, desktop.bottom() - margin - height)
+            elif icon.x() > center.x() and icon.y() < center.y(): # top right icon
+                self.window.move(desktop.right() - margin - width, margin)
+            elif icon.x() < center.x() and icon.y() < center.y(): # top left icon
+                self.window.move(margin, margin)
+            elif icon.x() < center.x() and icon.y() > center.y(): # bottom left icon
+                self.window.move(margin, desktop.bottom() - margin - height)
 
     @QtCore.Slot(object)
     def set_peers(self, files):
@@ -113,10 +133,8 @@ class PeerWindow(QtCore.QObject):
     @QtCore.Slot(object)
     def callback(self, item):
         (filename, _) = QtGui.QFileDialog.getSaveFileName()
-        dialog = QtGui.QProgressDialog("Downloading file...", "Go Go Go!", 0, 100)
-        dialog.setModal(True)
         c = Client(item.addr)
-        c.progress.connect(lambda ratio: dialog.setValue(ratio * 100))
+        c.progress.connect(self.progress.setValue)
         c.save(filename)
 
 if __name__ == '__main__':
@@ -136,7 +154,6 @@ if __name__ == '__main__':
     icon.activated.connect(window.toggle)
     lt.listener.files.connect(window.set_peers)
     window.opened.connect(st.server.set_download)
-    window.opened.connect(lt.listener.check)
     st.server.uploaded.connect(window.save_file)
 
     zeroconf = Zeroconf()
