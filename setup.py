@@ -19,6 +19,7 @@ OPTIONS = {
 }
 
 setup(
+    name="Gierzwaluw",
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
