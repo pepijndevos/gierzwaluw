@@ -7,33 +7,6 @@ from zeroconf import ServiceBrowser, Zeroconf
 from server import FileServer
 from client import Client
 
-class PeerMenu(QtGui.QMenu):
-
-    def __init__(self, share, quit):
-        QtGui.QMenu.__init__(self)
-        self.share = share
-        self.quit = quit
-        self.set_peers([])
-
-    def callback(self, addr):
-        def cb():
-            (filename, _) = QtGui.QFileDialog.getSaveFileName()
-            dialog = QtGui.QProgressDialog("Downloading file...", "Go Go Go!", 0, 100)
-            dialog.setModal(True)
-            c = Client(addr)
-            c.progress.connect(lambda ratio: dialog.setValue(ratio * 100))
-            c.save(filename)
-        return cb
-
-    @QtCore.Slot(object)
-    def set_peers(self, files):
-        self.clear()
-        for addr, filename in files:
-            self.addAction(QtGui.QAction(filename, self, triggered=self.callback(addr)))
-
-        self.addSeparator()
-        self.addAction(QtGui.QAction("Share...", self, triggered=self.share))
-        self.addAction(QtGui.QAction("Quit", self, triggered=self.quit))
 
 class GUIListener(QtCore.QObject):
 
@@ -62,9 +35,55 @@ class GUIListener(QtCore.QObject):
             addr = "http://%s:%d" % (socket.inet_ntoa(info.address), info.port)
             self.services[name] = addr
 
-class Application(QtGui.QApplication):
+class ListenerThread(QtCore.QThread):
 
+    def run(self):
+        self.listener = GUIListener()
+
+        timer = QtCore.QTimer()
+        timer.timeout.connect(self.listener.check)
+        timer.start(1000*60)
+        self.exec_()
+
+class ServerThread(QtCore.QThread):
+
+    def __init__(self):
+        QtCore.QThread.__init__(self)
+        self.server = FileServer()
+
+    def run(self):
+        self.server.start()
+
+class Peer(QtGui.QListWidgetItem):
+
+    def __init__(self, filename, addr):
+        QtGui.QListWidgetItem.__init__(self, filename)
+        self.addr = addr
+
+class PeerWindow(QtCore.QObject):
+    
     opened = QtCore.Signal(object)
+
+    def __init__(self, app, icon):
+        self.icon = icon
+        QtCore.QObject.__init__(self)
+        self.window = QtGui.QMainWindow(parent=None, flags=QtCore.Qt.FramelessWindowHint)
+
+        frame = QtGui.QFrame(self.window)
+        self.window.setCentralWidget(frame)
+        layout = QtGui.QVBoxLayout(frame)
+
+        self.peers = QtGui.QListWidget(self.window)
+        self.peers.itemClicked.connect(self.callback)
+        layout.addWidget(self.peers)
+
+        share = QtGui.QPushButton("Share...", self.window)
+        share.clicked.connect(self.open_file)
+        layout.addWidget(share)
+
+        quit = QtGui.QPushButton("Quit", self.window)
+        quit.clicked.connect(app.quit)
+        layout.addWidget(quit)
 
     @QtCore.Slot(str)
     def open_file(self):
@@ -77,39 +96,51 @@ class Application(QtGui.QApplication):
         if filename:
             upload.save(filename)
 
-class ServerThread(QtCore.QThread):
+    @QtCore.Slot(object)
+    def toggle(self, files):
+        if self.window.isVisible():
+            self.window.hide()
+        else:
+            self.window.show()
+            self.window.move(self.icon.geometry().center()) # close enough
 
-    def __init__(self):
-        QtCore.QThread.__init__(self)
-        self.server = FileServer()
+    @QtCore.Slot(object)
+    def set_peers(self, files):
+        self.peers.clear()
+        for addr, filename in files:
+            self.peers.addItem(Peer(filename, addr))
 
-    def run(self):
-        self.server.start()
+    @QtCore.Slot(object)
+    def callback(self, item):
+        (filename, _) = QtGui.QFileDialog.getSaveFileName()
+        dialog = QtGui.QProgressDialog("Downloading file...", "Go Go Go!", 0, 100)
+        dialog.setModal(True)
+        c = Client(item.addr)
+        c.progress.connect(lambda ratio: dialog.setValue(ratio * 100))
+        c.save(filename)
 
 if __name__ == '__main__':
-    app = Application(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
     st = ServerThread()
     st.start()
-    st.server.uploaded.connect(app.save_file)
-    app.opened.connect(st.server.set_download)
+
+    lt = ListenerThread()
+    lt.start()
 
     icon = QtGui.QSystemTrayIcon(QtGui.QIcon('images/swallow.png'), app)
-
-    listener = GUIListener()
-    t = QtCore.QThread()
-    t.start()
-    listener.moveToThread(t)
-
-    menu = PeerMenu(share=app.open_file, quit=app.quit)
-    icon.activated.connect(listener.check)
-    listener.files.connect(menu.set_peers)
-
-    icon.setContextMenu(menu)
+    
+    window = PeerWindow(app, icon)
+    icon.activated.connect(lt.listener.check)
+    icon.activated.connect(window.toggle)
+    lt.listener.files.connect(window.set_peers)
+    window.opened.connect(st.server.set_download)
+    window.opened.connect(lt.listener.check)
+    st.server.uploaded.connect(window.save_file)
 
     zeroconf = Zeroconf()
-    ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+    ServiceBrowser(zeroconf, "_http._tcp.local.", lt.listener)
 
     icon.show()
 
