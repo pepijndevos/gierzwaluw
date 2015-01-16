@@ -10,9 +10,13 @@ from setuptools import setup
 APP = ['gui.py']
 DATA_FILES = []
 OPTIONS = {
-        'argv_emulation': True,
-        'iconfile':'images/swallow.icns',
-        'resources': ['static', 'images']}
+    'argv_emulation': True,
+    'iconfile':'images/swallow.icns',
+    'resources': ['static', 'images'],
+    'plist': {
+        "LSUIElement": True,
+    },
+}
 
 setup(
     app=APP,
