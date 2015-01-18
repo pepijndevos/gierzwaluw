@@ -5,8 +5,8 @@ import socket
 from zeroconf import ServiceBrowser, Zeroconf
 from PySide import QtCore
 
-from server import FileServer
-from client import Client
+from gierzwaluw.server import FileServer
+from gierzwaluw.client import Client
 
 class CLIListener(object):
 

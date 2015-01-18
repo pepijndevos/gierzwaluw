@@ -4,8 +4,8 @@ import socket
 from PySide import QtCore, QtGui
 from zeroconf import ServiceBrowser, Zeroconf
 
-from server import FileServer
-from client import Client
+from gierzwaluw.server import FileServer
+from gierzwaluw.client import Client
 
 
 class GUIListener(QtCore.QObject):
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     lt = ListenerThread()
     lt.start()
 
-    icon = QtGui.QSystemTrayIcon(QtGui.QIcon('images/swallow.png'), app)
+    icon = QtGui.QSystemTrayIcon(QtGui.QIcon('static/swallow.png'), app)
     
     window = PeerWindow(app, icon)
     icon.activated.connect(lt.listener.check)

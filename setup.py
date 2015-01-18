@@ -7,12 +7,11 @@ Usage:
 
 from setuptools import setup
 
-APP = ['gui.py']
-DATA_FILES = []
+APP = ['gierzwaluw/gui.py']
+DATA_FILES = [('static', ['static/swallow.png', 'static/index.html'])]
 OPTIONS = {
     'argv_emulation': True,
-    'iconfile':'images/swallow.icns',
-    'resources': ['static', 'images'],
+    'iconfile':'static/swallow.icns',
     'plist': {
         "LSUIElement": True,
     },
@@ -20,6 +19,8 @@ OPTIONS = {
 
 setup(
     name="Gierzwaluw",
+    packages=['gierzwaluw'],
+    scripts=['gierzwaluw/gui.py', 'gierzwaluw/cli.py'],
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
