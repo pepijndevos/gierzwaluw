@@ -63,14 +63,13 @@ class Peer(QtGui.QListWidgetItem):
         QtGui.QListWidgetItem.__init__(self, filename)
         self.addr = addr
 
-class PeerWindow(QtCore.QObject):
+class PeerWindow(QtGui.QApplication):
     
     opened = QtCore.Signal(object)
 
-    def __init__(self, app, icon):
-        QtCore.QObject.__init__(self)
-        self.app = app
-        self.icon = icon
+    def __init__(self):
+        QtGui.QApplication.__init__(self, sys.argv)
+        self.icon = QtGui.QSystemTrayIcon(QtGui.QIcon('static/swallow.png'), self)
         self.window = QtGui.QMainWindow(parent=None, flags=QtCore.Qt.Popup)
 
         frame = QtGui.QFrame(self.window)
@@ -89,7 +88,7 @@ class PeerWindow(QtCore.QObject):
         layout.addWidget(share)
 
         quit = QtGui.QPushButton("Quit", self.window)
-        quit.clicked.connect(app.quit)
+        quit.clicked.connect(self.quit)
         layout.addWidget(quit)
 
     @QtCore.Slot(str)
@@ -112,7 +111,7 @@ class PeerWindow(QtCore.QObject):
             height = self.window.geometry().height()
             width = self.window.geometry().width()
             icon = self.icon.geometry().center()
-            desktop = self.app.desktop().availableGeometry()
+            desktop = self.desktop().availableGeometry()
             center = desktop.center();
             margin = 50
             if   icon.x() > center.x() and icon.y() > center.y(): # bottom right icon
@@ -138,7 +137,7 @@ class PeerWindow(QtCore.QObject):
         c.save(filename)
 
 if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
+    app = PeerWindow()
     app.setQuitOnLastWindowClosed(False)
 
     st = ServerThread()
@@ -146,19 +145,16 @@ if __name__ == '__main__':
 
     lt = ListenerThread()
     lt.start()
-
-    icon = QtGui.QSystemTrayIcon(QtGui.QIcon('static/swallow.png'), app)
     
-    window = PeerWindow(app, icon)
-    icon.activated.connect(lt.listener.check)
-    icon.activated.connect(window.toggle)
-    lt.listener.files.connect(window.set_peers)
-    window.opened.connect(st.server.set_download)
-    st.server.uploaded.connect(window.save_file)
+    app.icon.activated.connect(lt.listener.check)
+    app.icon.activated.connect(app.toggle)
+    lt.listener.files.connect(app.set_peers)
+    app.opened.connect(st.server.set_download)
+    st.server.uploaded.connect(app.save_file)
 
     zeroconf = Zeroconf()
     ServiceBrowser(zeroconf, "_http._tcp.local.", lt.listener)
 
-    icon.show()
+    app.icon.show()
 
     app.exec_()
