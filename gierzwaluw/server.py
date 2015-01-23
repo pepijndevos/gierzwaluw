@@ -38,7 +38,7 @@ class WebAnnouncer(QtCore.QThread):
         self.announce()
         timer = QtCore.QTimer()
         timer.timeout.connect(self.announce)
-        timer.start(1000*60*4)
+        timer.start(1000*60)
 
         self.exec_()
 

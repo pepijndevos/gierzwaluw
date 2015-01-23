@@ -151,7 +151,6 @@ if __name__ == '__main__':
     app.peers.itemClicked.connect(app.callback)
     app.share.clicked.connect(app.open_file)
     st.server.uploaded.connect(app.save_file)
-    st.server.set_download("requirements.txt")
 
     zeroconf = Zeroconf()
     ServiceBrowser(zeroconf, "_http._tcp.local.", lt.listener)
