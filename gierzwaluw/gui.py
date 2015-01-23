@@ -70,22 +70,20 @@ class PeerWindow(QtGui.QApplication):
     def __init__(self):
         QtGui.QApplication.__init__(self, sys.argv)
         self.icon = QtGui.QSystemTrayIcon(QtGui.QIcon('static/swallow.png'), self)
-        self.window = QtGui.QMainWindow(parent=None, flags=QtCore.Qt.Popup)
+        self.window = QtGui.QMainWindow(flags=QtCore.Qt.Popup)
 
         frame = QtGui.QFrame(self.window)
         self.window.setCentralWidget(frame)
         layout = QtGui.QVBoxLayout(frame)
 
         self.peers = QtGui.QListWidget(self.window)
-        self.peers.itemClicked.connect(self.callback)
         layout.addWidget(self.peers)
 
         self.progress = QtGui.QProgressBar(self.window)
         layout.addWidget(self.progress)
 
-        share = QtGui.QPushButton("Share...", self.window)
-        share.clicked.connect(self.open_file)
-        layout.addWidget(share)
+        self.share = QtGui.QPushButton("Share...", self.window)
+        layout.addWidget(self.share)
 
         quit = QtGui.QPushButton("Quit", self.window)
         quit.clicked.connect(self.quit)
@@ -147,10 +145,13 @@ if __name__ == '__main__':
     lt.start()
     
     app.icon.activated.connect(lt.listener.check)
-    app.icon.activated.connect(app.toggle)
     lt.listener.files.connect(app.set_peers)
+    app.icon.activated.connect(app.toggle)
     app.opened.connect(st.server.set_download)
+    app.peers.itemClicked.connect(app.callback)
+    app.share.clicked.connect(app.open_file)
     st.server.uploaded.connect(app.save_file)
+    st.server.set_download("requirements.txt")
 
     zeroconf = Zeroconf()
     ServiceBrowser(zeroconf, "_http._tcp.local.", lt.listener)
